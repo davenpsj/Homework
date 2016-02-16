@@ -35,16 +35,16 @@ FROM cmecomp3;
 
 2.d Which five handler_ids have been found in violation the most times? How many times?
 
-select distinct handler_id, count(found_violation_flag) from cmecomp3 where found_violation_flag = 'Y'
-group by 1
-ORDER BY 2 desc
+select handler_id, handler_name, count(found_violation_flag) from cmecomp3 where found_violation_flag = 'Y'
+group by handler_id, handler_name
+order by 3 desc
 Limit (5);
 --The top five handler_id: 
-"KYD053348108";4772
-"ILD048843809";4311
-"ILD006296800";3481
-"KY0000005785";2396
-"ILD000714881";2379
+"KYD053348108";"SAFETY-KLEEN SYSTEMS, INC.";4772
+"ILD048843809";"CHEMETCO INC";4311
+"ILD006296800";"MUSICK PLATING CO";3481
+"KY0000005785";"DESIGNTEC RECYCLING CENTER";2396
+"ILD000714881";"KEYSTONE STEEL & WIRE CO";2379
 
 
 
@@ -76,11 +76,11 @@ order by 2 desc;
 
 --The sector with the most hazardous-waste sectors is other services with 73,240.
 --The sector with the least is  management of companies and enterprises with 426.
---I used the substring(naics... to get the naics code, then used the group by.
+--I used the substring(naics... to get the naics code, then used the group by function.
 
 --3.d Create a temporary table called hsectors containing unique pairs of handler ids and sector discriptions
 create temp table hsectors AS (
-select naics_description, epa_handler_id 
+select naics_description, epa_handler_id
 '--from hnaics join naics on naics = substring(naics_code for 2) || '----'
 group by 1,2);
 

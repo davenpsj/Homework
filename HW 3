@@ -1,0 +1,89 @@
+﻿Select * from hhandler limit 10
+
+--1.a How many forms have been received?
+Select count(*) From hhandler;
+--the total forms received were 2280396
+
+--1.b How many facilities have registered?
+Select count(distinct transfer_facility) from hhandler
+--Only two facilities have registered.
+
+--1.c How many forms were received per year?
+Select extract(year from (receive_date::date)), count (*) from hhandler
+WHERE extract(year from (receive_date::date)) IN ('2011','2012','2013','2014','2015')
+Group by extract(year from (receive_date::date));
+--In 2011 69,795 forms were received. In 2012 92,413. In 2013 87,378. In 2014 128,099. In 2015 59,757.
+--I converted the receive_date to date and then looked at the last 5 years.
+
+--2.a How many evaluations are there?
+Select count(evaluation_identifier) from cmecomp3;
+--there were 2060714 evaluations.
+
+--2.b How many evaluations found violations
+select found_violation_flag, count(*) 
+from cmecomp3 where found_violation_flag = 'Y' 
+group by found_violation_flag;
+--out of the 2060714 evaluations, 1478260 found violations
+
+--2.c What Proportion of Evaluations found violations?
+select (SELECT count(found_violation_flag)::float 
+from cmecomp3 where found_violation_flag = 'Y')
+/ count(evaluation_identifier)::float 
+FROM cmecomp3;
+--71.735% of evaluations found violations.
+--For this I took the found violation and turned it into a float and then divided it by evaluation identifier.
+
+2.d Which five handler_ids have been found in violation the most times? How many times?
+
+select distinct handler_id, count(found_violation_flag) from cmecomp3 where found_violation_flag = 'Y'
+group by 1
+ORDER BY 2 desc
+Limit (5);
+--The top five handler_id: 
+"KYD053348108";4772
+"ILD048843809";4311
+"ILD006296800";3481
+"KY0000005785";2396
+"ILD000714881";2379
+
+
+
+--3.a how many different naics codes are there? How many six digit? How many two digits?
+select count(distinct naics) from naics; 
+-- There are 2016 naics codes
+select naics, count (*) from naics 
+where naics similar to '[0-9][0-9][^0-9]*' group by naics;
+--There are twenty naics codes two digits in length. The first two 0-9 will return any digits between zero and nine. With the ^ it returns any non-digit number.
+
+select naics, count (*) from naics 
+where naics similar to '[0-9][0-9][0-9][0-9][0-9][0-9]*' group by naics;
+-- There are 978 six digit codes. Similar to the previous except I did all six digits.
+
+--3.b How many handlers have naics codes? How many don't?
+select count(distinct(epa_handler_id)) 
+from hnaics where naics_code similar to '[0-9]*';
+--437962 have handler ids. Gives back any that starts with the digit.
+
+select count(distinct(epa_handler_id)) 
+from hnaics where naics_code not similar to '[0-9]*';
+--199 do not have handler ids.
+
+--3.c Join the hnaics table w the naics table and use group by. Which sector has the most hazardous-waste handlers? The least?
+select naics_description, count(distinct epa_handler_id) from hnaics
+join naics ON naics = substring(naics_code for 2) || '----'
+group by 1
+order by 2 desc;
+
+--The sector with the most hazardous-waste sectors is other services with 73,240.
+--The sector with the least is  management of companies and enterprises with 426.
+--I used the substring(naics... to get the naics code, then used the group by.
+
+--3.d Create a temporary table called hsectors containing unique pairs of handler ids and sector discriptions
+create temp table hsectors AS (
+select naics_description, epa_handler_id 
+'--from hnaics join naics on naics = substring(naics_code for 2) || '----'
+group by 1,2);
+
+--3.e join hsectors to cmecomp3, to determine each sector, the number of handlers evaluated, the number of evaluations, the number of violations, and the proportion of evals found violations?
+select naics_description, count(epa_handler_id) from hsectors join cmecomp3 on epa_handler_id- handler_id
+group by 1 order by 2;
